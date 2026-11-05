@@ -1,9 +1,10 @@
 package main
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
+	 "encoding/json"
+    "fmt"
+    "net/http"
+    "net/url"
 )
 
 type Product struct {
@@ -24,7 +25,7 @@ func buscarProdutosHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	apiURL := fmt.Sprintf("https://dummyjson.com/products/search?q=%s", termo)
+	apiURL := "https://dummyjson.com/products/search?q=" + url.QueryEscape(termo)
 	
 	resp, err := http.Get(apiURL)
 	if err != nil || resp.StatusCode != http.StatusOK {
@@ -70,12 +71,28 @@ func detalharProdutoHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(produto)
 }
 
+// liberar requisições (CORS) caso necessário
+func enableCORS(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusOK)
+			return
+		}
+
+		next(w, r)
+	}
+}
+
 func main() {
 	mux := http.NewServeMux()
 	
 	// registro das rotas / ferramentas do MCP
-	mux.HandleFunc("GET /tools/buscar_produtos", buscarProdutosHandler)
-	mux.HandleFunc("GET /tools/detalhar_produto/{id}", detalharProdutoHandler)
+	mux.HandleFunc("GET /tools/buscar_produtos", enableCORS(buscarProdutosHandler))
+	mux.HandleFunc("GET /tools/detalhar_produto/{id}", enableCORS(detalharProdutoHandler))
 
 	fmt.Println("Servidor MCP (Go) a rodar na porta 8001...")
 	if err := http.ListenAndServe(":8001", mux); err != nil {

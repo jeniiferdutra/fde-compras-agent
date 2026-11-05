@@ -3,50 +3,90 @@ package mcp
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
+	"strings"
+	"time"
 )
 
-// Estruturas de dados para mapear a resposta do MCP
-type Produto struct {
-	ID    int     `json:"id"`
-	Title string  `json:"title"`
-	Price float64 `json:"price"`
-}
-
-type RespostaMCP struct {
-	Status   string    `json:"status"`
-	Produtos []Produto `json:"produtos"`
+type Product struct {
+	ID          int     `json:"id"`
+	Title       string  `json:"title"`
+	Description string  `json:"description"`
+	Price       float64 `json:"price"`
 }
 
 type Client struct {
-	BaseURL string
+	BaseURL    string
+	HTTPClient *http.Client
 }
 
 func NovoCliente(baseURL string) *Client {
 	return &Client{
-		BaseURL: baseURL,
+		BaseURL: strings.TrimRight(baseURL, "/"),
+		HTTPClient: &http.Client{
+			Timeout: 15 * time.Second,
+		},
 	}
 }
 
-// BuscarProdutos faz a requisição HTTP GET para o Servidor MCP na porta 8001
-func (c *Client) BuscarProdutos(query string) ([]Produto, error) {
-    urlFinal := fmt.Sprintf("%s/tools/buscar_produtos?termo=%s", c.BaseURL, url.QueryEscape(query))
+func (c *Client) BuscarProdutos(termo string) ([]Product, error) {
+	apiURL := fmt.Sprintf(
+		"%s/tools/buscar_produtos?termo=%s",
+		c.BaseURL,
+		url.QueryEscape(termo),
+	)
 
-    resp, err := http.Get(urlFinal)
-    if err != nil {
-        return nil, fmt.Errorf("erro ao conectar ao servidor MCP: %w", err)
-    }
-    defer resp.Body.Close()
+	resp, err := c.HTTPClient.Get(apiURL)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao conectar ao MCP: %w", err)
+	}
+	defer resp.Body.Close()
 
-    if resp.StatusCode != http.StatusOK {
-        return nil, fmt.Errorf("mcp retornou código de erro: %d", resp.StatusCode)
-    }
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return nil, fmt.Errorf(
+			"MCP retornou status %d: %s",
+			resp.StatusCode,
+			string(body),
+		)
+	}
 
-    var produtos []Produto
-    if err := json.NewDecoder(resp.Body).Decode(&produtos); err != nil {
-        return nil, fmt.Errorf("erro ao decodificar resposta JSON do MCP: %w", err)
-    }
+	var produtos []Product
+	if err := json.NewDecoder(resp.Body).Decode(&produtos); err != nil {
+		return nil, fmt.Errorf("erro ao interpretar produtos: %w", err)
+	}
 
-    return produtos, nil
+	return produtos, nil
+}
+
+func (c *Client) DetalharProduto(id string) (Product, error) {
+	apiURL := fmt.Sprintf(
+		"%s/tools/detalhar_produto/%s",
+		c.BaseURL,
+		url.PathEscape(id),
+	)
+
+	resp, err := c.HTTPClient.Get(apiURL)
+	if err != nil {
+		return Product{}, fmt.Errorf("erro ao conectar ao MCP: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return Product{}, fmt.Errorf(
+			"MCP retornou status %d: %s",
+			resp.StatusCode,
+			string(body),
+		)
+	}
+
+	var produto Product
+	if err := json.NewDecoder(resp.Body).Decode(&produto); err != nil {
+		return Product{}, fmt.Errorf("erro ao interpretar produto: %w", err)
+	}
+
+	return produto, nil
 }
