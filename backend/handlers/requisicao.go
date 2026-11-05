@@ -35,7 +35,7 @@ func CriarRequisicaoHandler(w http.ResponseWriter, r *http.Request) {
 
 	// busca os dados no Servidor MCP
 	mcpClient := mcp.NovoCliente("http://localhost:8001")
-	produtosResp, err := mcpClient.BuscarProdutos(req.Mensagem)
+	produtos, err := mcpClient.BuscarProdutos("laptop")
 	if err != nil {
 		http.Error(w, "Erro ao interagir com o MCP: "+err.Error(), http.StatusInternalServerError)
 		return
@@ -43,13 +43,13 @@ func CriarRequisicaoHandler(w http.ResponseWriter, r *http.Request) {
 
 	promptContexto := fmt.Sprintf(
 		"O usuário pediu: '%s'. Com base nos seguintes produtos encontrados no estoque: %+v, escreva uma resposta amigável e resumida recomendando as melhores opções.",
-		req.Mensagem, produtosResp.Produtos,
+		req.Mensagem, produtos,
 	)
 
 	// envia para a OpenRouter processar
 	respostaLLM, err := llm.PerguntarAoLLM(promptContexto)
 	if err != nil {
-		respostaLLM = fmt.Sprintf("Encontramos %d produtos para sua busca.", len(produtosResp.Produtos))
+		respostaLLM = fmt.Sprintf("Encontramos %d produtos para sua busca.", len(produtos))
 	}
 
 	// salva no postgres a mensagem do usuário e a resposta processada pela LLM
@@ -69,7 +69,7 @@ func CriarRequisicaoHandler(w http.ResponseWriter, r *http.Request) {
 		"status":   "sucesso",
 		"mensagem": req.Mensagem,
 		"resposta": respostaLLM,
-		"produtos": produtosResp.Produtos,
+		"produtos": produtos,
 	})
 }
 

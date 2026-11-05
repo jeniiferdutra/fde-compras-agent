@@ -12,7 +12,7 @@ var DB *sql.DB
 
 // inicializa a conexão com o PostgreSQL
 func Conectar() {
-	connStr := "host=localhost port=5432 user=postgres password=postgres dbname=fde_compras sslmode=disable"
+	connStr := "host=localhost port=5432 user=postgres password=2738 dbname=fde_compras sslmode=disable"
 
 	var err error
 	DB, err = sql.Open("postgres", connStr)

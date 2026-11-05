@@ -1,8 +1,11 @@
 package main
 
 import (
-	"fmt"
+	"log"
 	"net/http"
+
+	"backend/database"
+	"backend/handlers"
 )
 
 func healthHandler(w http.ResponseWriter, r *http.Request) {
@@ -11,11 +14,16 @@ func healthHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	mux := http.NewServeMux()
-	mux.HandleFunc("GET /health", healthHandler)
+	// conexão com o banco
+	database.Conectar()
 
-	fmt.Println("Backend/Agent a rodar na porta 8080...")
-	if err := http.ListenAndServe(":8080", mux); err != nil {
-		fmt.Printf("Erro ao iniciar o backend: %v\n", err)
+	// registra as rotas
+	http.HandleFunc("/health", healthHandler)
+	http.HandleFunc("/requisicoes", handlers.CriarRequisicaoHandler)
+
+	log.Println("Backend/Agent a rodar na porta 8080...")
+	
+	if err := http.ListenAndServe(":8080", nil); err != nil {
+		log.Fatalf("Erro ao iniciar o servidor: %v", err)
 	}
 }
