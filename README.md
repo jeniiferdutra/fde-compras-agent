@@ -1,82 +1,37 @@
-# FDE Compras Agent
+# FDE — Agente de compras
 
-Agente de compras desenvolvido em Go, React e PostgreSQL, utilizando LLM via OpenRouter e ferramentas MCP para consultar produtos na API DummyJSON e registrar requisições de compra.
+Aplicação para criar requisições de compra por meio de uma conversa. O agente consulta produtos da DummyJSON, confirma os dados dos itens e registra a requisição no PostgreSQL.
 
 ## Como executar
 
-**Pré-requisitos:** Docker Desktop e uma chave da OpenRouter.
-
-1. Clone o repositório e acesse a pasta:
+Requisitos: Docker Desktop com Docker Compose e uma chave da OpenRouter.
 
 ```bash
-git clone <URL_DO_REPOSITORIO>
-cd fde-compras-agent
+cp .env.example .env
 ```
 
-2. Crie o arquivo `.env` na raiz do projeto:
-
-```env
-POSTGRES_USER=postgres
-POSTGRES_PASSWORD=sua_senha
-POSTGRES_DB=fde_compras
-
-DB_HOST=postgres
-DB_PORT=5432
-DB_USER=postgres
-DB_PASSWORD=sua_senha
-DB_NAME=fde_compras
-
-OPENROUTER_API_KEY=sua_chave
-```
-
-3. Inicie os serviços:
+Defina `OPENROUTER_API_KEY` no arquivo `.env` e inicie os serviços:
 
 ```bash
-docker compose up --build -d
+docker compose up --build
 ```
 
-4. Verifique se os containers estão ativos:
+Acesse o chat em [http://localhost:5174](http://localhost:5174). Para encerrar, use `Ctrl+C`.
+
+Os testes das ferramentas MCP rodam sem chave de LLM nem acesso à DummyJSON:
 
 ```bash
-docker compose ps
+cd mcp_server
+mvn test
 ```
 
-Para acompanhar os logs:
+## Decisões principais
 
-```bash
-docker compose logs -f
-```
-
-## Arquitetura e decisões técnicas
-
-O projeto possui quatro componentes:
-
-- **Frontend (React):** interface de chat para receber solicitações de compra.
-- **Backend:** coordena o agente, processa os pedidos e disponibiliza os endpoints de requisições.
-- **Servidor MCP (Go):** disponibiliza as ferramentas `buscar_produtos(termo)` e `detalhar_produto(id)`, integradas à API DummyJSON.
-- **PostgreSQL:** armazena as requisições de compra e seus respectivos itens.
-
-O modelo de linguagem, integrado via OpenRouter, interpreta os pedidos e decide quando utilizar as ferramentas MCP, sem depender de um fluxo fixo de chamadas definido no código.
-
-O PostgreSQL foi escolhido para garantir a persistência das requisições e permitir sua consulta posterior. A inicialização do banco e dos serviços é realizada pelo Docker Compose.
-
-## Endpoints
-
-| Método | Endpoint | Descrição |
-|---|---|---|
-| POST | `/requisicoes` | Processa um pedido e registra a requisição de compra. |
-| GET | `/requisicoes` | Lista as requisições armazenadas. |
-
-## Testes
-
-Os testes das ferramentas MCP podem ser executados sem chave de LLM:
-
-```bash
-go test ./...
-```
-
-Execute o comando no diretório do módulo Go.
+- API e servidor MCP em Java 21 com Spring Boot; chat em React e Vite.
+- O modelo escolhe quando usar as ferramentas MCP para buscar e detalhar produtos da DummyJSON.
+- A API valida itens e preços antes de salvar as requisições no PostgreSQL; as tabelas são criadas automaticamente.
+- As consultas ao catálogo têm timeout e mensagens de erro claras.
 
 ## Uso de IA
 
-ChatGPT e Gemini foi utilizado como apoio à programação, depuração e documentação do projeto.
+Usei o Codex como apoio durante o desenvolvimento, aplicando meu conhecimento no uso de IA para acelerar a implementação, avaliar alternativas e revisar o código. Revisei as decisões e o comportamento final da aplicação.

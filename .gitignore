@@ -1,8 +1,6 @@
-mcp-server/mcp-server
-.idea/
-*.DS_Store
-
-# Arquivos com credenciais
 .env
-.env.*
-!.env.example
+__pycache__/
+*.py[cod]
+node_modules/
+dist/
+.DS_Store

@@ -1,24 +1,11 @@
-
-# Estágio de compilação
-FROM golang:1.26.4-alpine AS builder
-
+FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /app
-
-COPY go.mod go.sum ./
-
-RUN go mod download
-
-COPY . .
-
-RUN CGO_ENABLED=0 GOOS=linux go build -o main .
-
-# Estágio final
-FROM alpine:latest
-
+COPY pom.xml .
+RUN mvn -q -DskipTests dependency:go-offline
+COPY src ./src
+RUN mvn -q -DskipTests package
+FROM eclipse-temurin:21-jre
 WORKDIR /app
-
-COPY --from=builder /app/main .
-
-EXPOSE 8080
-
-CMD ["./main"]
+COPY --from=build /app/target/purchase-api-1.0.0.jar app.jar
+EXPOSE 8000
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]
